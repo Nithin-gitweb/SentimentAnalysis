@@ -1,0 +1,44 @@
+from flask import Flask,render_template,request
+import pymysql as dbc
+import pandas as pd
+import pandas.io.sql as sql
+import time
+conn = dbc.connect(host='localhost', user='root', passwd='', db='sentiment')
+Mycursor = conn.cursor()
+app = Flask(__name__)
+#df = pd.DataFrame(columns=['Username', 'EmailID', 'Manufacturer', 'Product', 'EnginePerformance', 'Dynamics', 'Handling', 'EngineScore', 'DynamicsScore', 'HandlingScore', 'OverAllPerformance'])
+@app.route('/')
+def index2():
+    return render_template('manufacturerapi.html')
+@app.route('/', methods=['POST'])
+def get_val():
+    global dataframe
+    querry_original = "SELECT * FROM bettycooper"
+    dataframe = sql.read_sql(querry_original, conn)
+    manufacturer = request.form['Manufacturer']
+    manufacturer = "'"+str(manufacturer)+"'"
+    product = request.form['Product']
+    product = str(product)
+    Mycursor.execute('SHOW TABLES')
+    table = Mycursor.fetchall()
+    table_names = []
+    for i in table:
+        i = str(i)
+        table_names.append(i)
+    table_names = [i[2:-3] for i in table_names]
+    for name in table_names:
+        if product == '--------':
+            querry = "SELECT * FROM " + str(name) + " WHERE Manufacturer = " + manufacturer
+            querry = str(querry)
+            dataframe2 = sql.read_sql(querry, conn)
+            dataframe = dataframe.append(dataframe2)
+        else:
+            querry = "SELECT * FROM " + str(name) + " WHERE Manufacturer = " + manufacturer
+            querry = str(querry)
+            dataframe2 = sql.read_sql(querry, conn)
+            dataframe2 = dataframe2.loc[dataframe2['Product'] == product]
+            dataframe = dataframe.append(dataframe2)
+    dataframe.to_html(r'C:\Users\npt19\PycharmProjects\DataAnalytics and ML\templates\manufacturerretrival.html')
+    return render_template('manufacturerretrival.html')
+if __name__ == '__main__':
+   app.run(debug = True,port=9998)
